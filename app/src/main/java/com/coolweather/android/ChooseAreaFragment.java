@@ -4,6 +4,7 @@ import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,11 +13,13 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.coolweather.android.db.City;
 import com.coolweather.android.db.County;
 import com.coolweather.android.db.Province;
 import com.coolweather.android.util.HttpUtil;
+import com.coolweather.android.util.LogUtil;
 import com.coolweather.android.util.Utility;
 
 import org.litepal.crud.DataSupport;
@@ -57,7 +60,7 @@ public class ChooseAreaFragment extends Fragment {
 
     private List<City> cityList;//市列表
 
-    private List<County> countyList;//县列表
+    private List<County> countyList;
 
     private Province selectProvince;//选中的省份
 
@@ -65,7 +68,6 @@ public class ChooseAreaFragment extends Fragment {
 
     private int currentLevel;
 
-    @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.choose_area, container, false);
@@ -102,7 +104,7 @@ public class ChooseAreaFragment extends Fragment {
                 }
             }
         });
-        queryProvinces();
+        queryProvinces();//一开始是先执行这个方法将所有省份在listView中列举出来
     }
 
     private void queryProvinces() {
@@ -128,7 +130,7 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCounties() {
         titleText.setText(selectCity.getCityName());
         backButton.setVisibility(View.VISIBLE);
-        countyList = DataSupport.where("cityid=?", String.valueOf(selectCity.getId())).find(County.class);
+        countyList = DataSupport.where("cityid = ?", String.valueOf(selectCity.getId())).find(County.class);
         if (countyList.size() > 0) {
             dataList.clear();
             for (County county : countyList) {
@@ -140,7 +142,8 @@ public class ChooseAreaFragment extends Fragment {
         } else {
             int provinceCode = selectProvince.getProvinceCode();
             int cityCode = selectCity.getCityCode();
-            String address = "http://guolin.tech/api/china" + provinceCode + "/" + cityCode;
+            String address = "http://guolin.tech/api/china" + "/" + provinceCode + "/" + cityCode;
+            LogUtil.e("ChooseAreaFragment", "县的地址为：" + address);
             queryFromServer(address, "county");
         }
     }
@@ -152,10 +155,19 @@ public class ChooseAreaFragment extends Fragment {
         titleText.setText(selectProvince.getProvinceName());
         backButton.setVisibility(View.VISIBLE);//意思是可见的
         cityList = DataSupport.where("provinceid = ?", String.valueOf(selectProvince.getId())).find(City.class);
+
+        //判断cityList是否为空
+        if (cityList.isEmpty()) {
+            LogUtil.e("ChooseAreaFragment", "cityList is null");
+        } else {
+            LogUtil.e("ChooseAreaFragment", "cityList no null");
+        }
+
         if (cityList.size() > 0) {
             dataList.clear();
             for (City city : cityList) {
                 dataList.add(city.getCityName());
+                LogUtil.e("ChooseAreaFragment", "城市的名字：" + city.getCityName());
             }
             adapter.notifyDataSetChanged();//通知listview数据发生改变
             listView.setSelection(0);
@@ -163,6 +175,7 @@ public class ChooseAreaFragment extends Fragment {
         } else {
             int provinceCode = selectProvince.getProvinceCode();
             String address = "http://guolin.tech/api/china/" + provinceCode;
+            LogUtil.e("ChooseAreaFragment", "网络请求地址为：" + address);
             queryFromServer(address, "city");
         }
     }
@@ -172,17 +185,36 @@ public class ChooseAreaFragment extends Fragment {
         HttpUtil.sendOkHttpRequest(address, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-
+                //返回主线进行UI处理
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        closeProgressDialog();
+                        Toast.makeText(getActivity(), "加载失败", Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
+                LogUtil.e("ChooseAreaFragment", "网络返回的数据为：" + responseText);//网络数据返回正常
                 boolean result = false;
                 if ("province".equals(type)) {
                     result = Utility.handleProvinceResponse(responseText);
                 } else if ("city".equals(type)) {
                     result = Utility.handleCityResponse(responseText, selectProvince.getId());
+
+                    /*
+                    查看是否解析成功
+                    * */
+                    if (result) {
+                        LogUtil.e("ChooseAreaFragment", "city 解析成功");
+                    } else {
+                        LogUtil.e("ChooseAreaFragment", "city 解析失败");
+                    }
+                    LogUtil.e("ChooseAreaFragment", "selectProvince id is " + selectProvince.getId());
+
                 } else if ("county".equals(type)) {
                     result = Utility.handleCountyResponse(responseText, selectCity.getId());
                 }

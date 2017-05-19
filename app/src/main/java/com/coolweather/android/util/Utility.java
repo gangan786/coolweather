@@ -37,7 +37,7 @@ public class Utility {
 
     //解析和处理服务器返回的市级数据
     public static boolean handleCityResponse(String response, int provinceId) {
-        if (TextUtils.isEmpty(response)) {
+        if (!TextUtils.isEmpty(response)) {
             try {
                 JSONArray allCities = new JSONArray(response);
                 for (int i = 0; i < allCities.length(); i++) {
@@ -47,6 +47,11 @@ public class Utility {
                     city.setCityCode(cityObject.getInt("id"));
                     city.setProvinceId(provinceId);
                     city.save();
+                    if (city.isSaved()) {
+                        LogUtil.e("Utility", "保存成功" + i);
+                    } else {
+                        LogUtil.e("Utility", "保存失败" + cityObject.getString("name"));
+                    }
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -57,7 +62,7 @@ public class Utility {
     }
 
     public static boolean handleCountyResponse(String response, int cityId) {
-        if (TextUtils.isEmpty(response)) {
+        if (!TextUtils.isEmpty(response)) {
             try {
                 JSONArray allCountries = new JSONArray(response);
                 for (int i = 0; i < allCountries.length(); i++) {
