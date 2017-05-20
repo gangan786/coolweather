@@ -4,7 +4,6 @@ import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,6 +19,7 @@ import com.coolweather.android.db.County;
 import com.coolweather.android.db.Province;
 import com.coolweather.android.util.HttpUtil;
 import com.coolweather.android.util.LogUtil;
+import com.coolweather.android.util.MyApplication;
 import com.coolweather.android.util.Utility;
 
 import org.litepal.crud.DataSupport;
@@ -74,7 +74,7 @@ public class ChooseAreaFragment extends Fragment {
         titleText = (TextView) view.findViewById(R.id.title_text);
         backButton = (Button) view.findViewById(R.id.buck_button);
         listView = (ListView) view.findViewById(R.id.list_view);
-        adapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, dataList);//这里忽视了getContext()方法的一个版本报错
+        adapter = new ArrayAdapter<>(MyApplication.getContext(), android.R.layout.simple_list_item_1, dataList);  //这里忽视了getContext()方法的一个版本报错
         listView.setAdapter(adapter);
         return view;
     }
@@ -130,7 +130,7 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCounties() {
         titleText.setText(selectCity.getCityName());
         backButton.setVisibility(View.VISIBLE);
-        countyList = DataSupport.where("cityid = ?", String.valueOf(selectCity.getId())).find(County.class);
+        countyList = DataSupport.where("cityid = ?", String.valueOf(selectCity.getId() ) ).find(County.class);
         if (countyList.size() > 0) {
             dataList.clear();
             for (County county : countyList) {
